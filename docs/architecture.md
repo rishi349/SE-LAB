@@ -51,6 +51,14 @@ same functions are reused by scripts (`create_admin`, `purge_deactivated_account
 * `security.py` — bcrypt hashing, HS256 JWT with 1-hour expiry.
 * `money.py`, `clock.py`, `ids.py`, `validators.py`, `idempotency.py`.
 
+## Demo client
+
+`app/static/demo.html` is a single static page served at `/demo`. It is a thin client: it
+calls the same `/api/v1` endpoints as any other client, stores the JWT in `sessionStorage`,
+generates a fresh `Idempotency-Key` per action (with a "retry same request" button to show
+idempotency), and converts rupee input to integer paise without floating-point maths. It has no
+privileges of its own; the backend enforces every rule.
+
 ## Request lifecycle (transfer)
 
 1. `deps` opens a connection, validates the JWT, loads the user, checks role and rate limit.

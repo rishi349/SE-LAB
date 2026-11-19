@@ -53,6 +53,7 @@ the design decided differently.
 | D22 | Database triggers enforce immutability of transactions, ledger entries and reports, and permanence of `user_id`, `role`, `email`, wallets and users. | Immutability enforced even against buggy code, not just by convention. |
 | D23 | Token expiry fixed at 1 hour in code (not configurable). | Finalised value; prevents accidental drift through env vars. |
 | D24 | Run with `uvicorn app.main:create_app --factory`. | Lets tests build apps with their own settings/database. |
+| D25 | Added a demo client at `/demo` (one static HTML/JS file, `/` redirects to it) at the team's request, for demonstrations and manual testing. | It only calls the public `/api/v1` endpoints, is excluded from the OpenAPI spec, and adds no backend rules. All validation, limits, idempotency and authorization remain enforced by the API. Served from the same origin, so no CORS change was needed. |
 
 ## Known limitations
 * Rate limits are per process and reset on restart.

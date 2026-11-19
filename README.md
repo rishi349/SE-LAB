@@ -26,7 +26,14 @@ python -m scripts.create_admin --name "Test Admin" --email admin@example.com
 uvicorn app.main:create_app --factory --reload
 ```
 
-Open <http://127.0.0.1:8000/docs> for interactive Swagger documentation.
+Then open:
+
+* **<http://127.0.0.1:8000/demo>** — demo web page (log in, send money, history, admin funding,
+  reconciliation, plus a live log of every API call). `/` redirects here.
+* **<http://127.0.0.1:8000/docs>** — Swagger documentation for calling endpoints directly.
+
+> Windows/Miniconda: if `python3.12` or `py` is not found, use `python` instead, and run the
+> server with `python -m uvicorn app.main:create_app --factory --reload`.
 
 ### Run the checks
 
@@ -50,6 +57,7 @@ pytest -q
 | Admin | `GET /admin/users/{user_id}`, `POST /admin/fundings` (needs `Idempotency-Key`) |
 | Reconciliation | `POST/GET /admin/reconciliation-runs`, `GET /admin/reconciliation-runs/{run_id}` |
 | Health | `GET /health` |
+| Demo page | `GET /demo` (static page, not part of the API) |
 
 Key rules: ₹50,000 maximum per transfer, ₹1,00,000 successful outgoing per IST day
 (resets at midnight `Asia/Kolkata`), no self-transfers, failed attempts are stored and shown
@@ -61,6 +69,7 @@ needs a ₹0 balance plus a 7-day waiting period.
 ```
 app/
   main.py              application factory, router registration, request logging
+  static/demo.html     demo client page (vanilla HTML/JS, calls /api/v1 only)
   config.py            settings from environment / .env
   core/                errors, security (bcrypt/JWT), deps, money, clock, ids, rate limit
   db/                  schema.sql + connection and transaction helpers
