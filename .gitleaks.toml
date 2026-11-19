@@ -1,0 +1,14 @@
+title = "financial-ledger-api gitleaks config"
+
+[extend]
+useDefault = true
+
+# Only clearly fake, throwaway values live in these paths (test fixtures, the placeholder
+# .env.example and the CI-only JWT secret). Real secrets belong in an untracked .env file.
+[allowlist]
+description = "Known placeholder / test-only values"
+paths = [
+  '''^tests/''',
+  '''^\.env\.example$''',
+  '''^\.github/workflows/ci\.yml$''',
+]
