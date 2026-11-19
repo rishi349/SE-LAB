@@ -7,8 +7,10 @@ from __future__ import annotations
 
 import logging
 import time
+from pathlib import Path
 
 from fastapi import FastAPI, Request
+from fastapi.responses import FileResponse, RedirectResponse
 
 from app.config import Settings, load_settings
 from app.core.handlers import register_exception_handlers
@@ -23,6 +25,7 @@ from app.modules.users.router import router as users_router
 from app.modules.wallets.router import router as wallets_router
 
 API_PREFIX = "/api/v1"
+DEMO_PAGE = Path(__file__).parent / "static" / "demo.html"
 request_logger = logging.getLogger("app.request")
 
 
@@ -63,6 +66,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.get(f"{API_PREFIX}/health", tags=["Health"], summary="Liveness check")
     def health() -> dict:
         return {"status": "ok"}
+
+    # Demo client: a single static page that only calls the public /api/v1 endpoints.
+    # All rules stay enforced by the API; the page adds no backend behaviour.
+    @app.get("/demo", include_in_schema=False)
+    def demo_page() -> FileResponse:
+        return FileResponse(DEMO_PAGE, media_type="text/html")
+
+    @app.get("/", include_in_schema=False)
+    def root() -> RedirectResponse:
+        return RedirectResponse(url="/demo")
 
     for router in (
         auth_router,
