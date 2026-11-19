@@ -3,6 +3,8 @@
 Base path `/api/v1`. JSON in and out. Interactive docs: `/docs` (Swagger) and `/redoc`;
 OpenAPI spec: `/api/v1/openapi.json`.
 
+A demo web client is served at `/demo` (not part of the API; see `app/static/demo.html`).
+
 ## Conventions
 
 * **Auth:** `Authorization: Bearer <token>` from `POST /auth/login`. Tokens last 1 hour; no
