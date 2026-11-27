@@ -88,6 +88,22 @@
   .log-entry pre { white-space: pre-wrap; word-break: break-all; background: #161d30; padding: 8px;
                    border-radius: 6px; margin: 6px 0 0; color: #c6d0e5; }
   .replay { color: #ffd36e; }
+  /* notifications */
+  .bell { position: relative; background: transparent; border: 1px solid #ffffff44; color: #fff;
+          padding: 5px 10px; font-size: 16px; line-height: 1; }
+  .bell .badge { position: absolute; top: -6px; right: -6px; background: var(--bad); color: #fff;
+                 border-radius: 999px; font-size: 11px; font-weight: 700; padding: 1px 6px; }
+  #notif-panel { position: fixed; top: 58px; right: 24px; width: 380px; max-height: 70vh;
+                 overflow: auto; background: var(--card); color: var(--ink); border: 1px solid var(--line);
+                 border-radius: 12px; box-shadow: 0 12px 32px #0003; z-index: 20; }
+  #notif-panel header { display: flex; justify-content: space-between; align-items: center;
+                        padding: 12px 14px; border-bottom: 1px solid var(--line); }
+  #notif-panel header strong { font-size: 15px; }
+  .notif { padding: 10px 14px; border-bottom: 1px solid var(--line); cursor: pointer; font-size: 14px; }
+  .notif:hover { background: #f6f8fc; }
+  .notif.unread { background: #eef3ff; }
+  .notif.unread::before { content: "●"; color: var(--brand); margin-right: 6px; font-size: 10px; }
+  .notif small { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
   #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--ink);
            color: #fff; padding: 10px 16px; border-radius: 8px; font-size: 14px; opacity: 0;
            transition: opacity .2s; pointer-events: none; }
@@ -347,6 +363,13 @@
     <div id="log"></div>
   </aside>
 </div>
+<div id="notif-panel" hidden>
+  <header>
+    <strong>Notifications</strong>
+    <button class="ghost small" type="button" id="notif-read-all">Mark all read</button>
+  </header>
+  <div id="notif-list"></div>
+</div>
 <div id="toast"></div>
 
 <script>
@@ -515,7 +538,12 @@ function renderShell() {
   $("admin-view").hidden = !me || me.role !== "admin";
   const who = $("whoami");
   who.replaceChildren();
+  $("notif-panel").hidden = true;
   if (!me) return;
+  if (me.role === "user") {
+    who.append(el("button", { class: "bell", type: "button", id: "bell", title: "Notifications",
+      onclick: toggleNotifications }, "🔔", el("span", { class: "badge", id: "notif-badge", hidden: "" })));
+  }
   who.append(
     el("span", {}, me.name),
     el("span", { class: "role" }, me.role),
@@ -596,6 +624,7 @@ async function refreshWallet() {
     $("w-userid").textContent = data.user_id;
     $("w-walletid").textContent = data.wallet_id;
     $("w-updated").textContent = formatIST(data.updated_at);
+    setBadge(data.unread_notifications);  // piggybacked on the wallet response
   } catch (err) {
     toast(errorText(err));
   }
@@ -673,6 +702,54 @@ $("send-form").addEventListener("submit", (e) => {
 $("send-retry").addEventListener("click", (e) => {
   if (state.lastSend) withBusy(e.currentTarget, () => doSend(state.lastSend));
 });
+
+/* ---------------------------------------------------------------- notifications */
+// No timer: the badge updates on page load and after actions (via the wallet response)
+// and whenever the bell is opened. See docs/notifications-design.md.
+function setBadge(count) {
+  const badge = $("notif-badge");
+  if (!badge) return;
+  badge.textContent = count > 99 ? "99+" : String(count || 0);
+  badge.hidden = !count;
+}
+
+async function loadNotifications() {
+  const list = $("notif-list");
+  try {
+    const { data } = await api("GET", "/notifications?page=1&page_size=10");
+    setBadge(data.unread_count);
+    list.replaceChildren();
+    if (!data.items.length) list.append(el("div", { class: "empty" }, "No notifications yet."));
+    for (const n of data.items) {
+      list.append(el("div", { class: "notif" + (n.is_read ? "" : " unread"),
+        onclick: () => markRead(n) }, n.message, el("small", {}, formatIST(n.created_at))));
+    }
+  } catch (err) {
+    list.replaceChildren(el("div", { class: "empty" }, errorText(err)));
+  }
+}
+
+async function markRead(n) {
+  if (n.is_read) return;
+  try { await api("PATCH", "/notifications/" + n.notification_id + "/read"); }
+  catch (err) { toast(errorText(err)); }
+  loadNotifications();
+}
+
+function toggleNotifications(e) {
+  e.stopPropagation();
+  const panel = $("notif-panel");
+  panel.hidden = !panel.hidden;
+  if (!panel.hidden) loadNotifications();
+}
+
+$("notif-read-all").addEventListener("click", async (e) => {
+  e.stopPropagation();
+  try { await api("POST", "/notifications/read-all"); } catch (err) { toast(errorText(err)); }
+  loadNotifications();
+});
+$("notif-panel").addEventListener("click", (e) => e.stopPropagation());
+document.addEventListener("click", () => { $("notif-panel").hidden = true; });
 
 /* ---------------------------------------------------------------- history */
 async function loadHistory() {

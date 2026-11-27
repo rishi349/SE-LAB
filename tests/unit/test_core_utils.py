@@ -7,6 +7,7 @@ from app.core.clock import IST, from_db, ist_dates_to_utc_range, ist_day_window,
 from app.core.money import (
     MAX_DAILY_OUTGOING_PAISE,
     MAX_SINGLE_TRANSFER_PAISE,
+    format_inr,
     format_rupees,
     is_paise,
 )
@@ -25,6 +26,22 @@ class TestMoney:
     )
     def test_format_rupees(self, paise, text):
         assert format_rupees(paise) == text
+
+    @pytest.mark.parametrize(
+        ("paise", "text"),
+        [
+            (0, "₹0.00"),
+            (5, "₹0.05"),
+            (99_900, "₹999.00"),
+            (100_000, "₹1,000.00"),
+            (5_000_000, "₹50,000.00"),
+            (10_000_000, "₹1,00,000.00"),
+            (1_234_567_890, "₹1,23,45,678.90"),
+            (-100_000, "-₹1,000.00"),
+        ],
+    )
+    def test_format_inr_uses_indian_grouping(self, paise, text):
+        assert format_inr(paise) == text
 
     @pytest.mark.parametrize("bad", [1.5, "100", True, None])
     def test_non_integer_money_is_rejected(self, bad):

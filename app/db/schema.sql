@@ -160,3 +160,24 @@ BEGIN SELECT RAISE(ABORT, 'reconciliation reports are immutable'); END;
 
 CREATE TRIGGER IF NOT EXISTS trg_recon_disc_no_delete BEFORE DELETE ON reconciliation_discrepancies
 BEGIN SELECT RAISE(ABORT, 'reconciliation reports are immutable'); END;
+
+-- ---------------------------------------------------------------- notifications
+-- In-app notifications. Written AFTER the money transaction commits (best-effort), so a
+-- notification can never make a transfer or funding fail. No message text is stored: the
+-- API builds it on read with the counterparty's current name. Only is_read/read_at change.
+CREATE TABLE IF NOT EXISTS notifications (
+    notification_id      INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id              TEXT NOT NULL REFERENCES users (user_id),
+    type                 TEXT NOT NULL CHECK (type IN
+                         ('TRANSFER_SENT', 'TRANSFER_RECEIVED', 'TRANSFER_FAILED', 'WALLET_FUNDED')),
+    transaction_id       TEXT NOT NULL REFERENCES transactions (transaction_id),
+    counterparty_user_id TEXT REFERENCES users (user_id),
+    amount_paise         INTEGER NOT NULL CHECK (typeof(amount_paise) = 'integer'),
+    is_read              INTEGER NOT NULL DEFAULT 0 CHECK (is_read IN (0, 1)),
+    created_at           TEXT NOT NULL,
+    read_at              TEXT,
+    UNIQUE (user_id, transaction_id, type)
+);
+
+CREATE INDEX IF NOT EXISTS idx_notif_user_created ON notifications (user_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_notif_user_unread ON notifications (user_id, is_read);

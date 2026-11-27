@@ -16,6 +16,21 @@ def is_paise(value: object) -> bool:
     return isinstance(value, int) and not isinstance(value, bool)
 
 
+def format_inr(paise: int) -> str:
+    """Rupee sign + Indian digit grouping, e.g. 10000000 -> '₹1,00,000.00'."""
+    plain = format_rupees(paise)
+    sign = "-" if plain.startswith("-") else ""
+    whole, fraction = plain.lstrip("-").split(".")
+    if len(whole) > 3:
+        head, tail = whole[:-3], whole[-3:]
+        pairs = []
+        while len(head) > 2:
+            pairs.insert(0, head[-2:])
+            head = head[:-2]
+        whole = ",".join([head, *pairs, tail])
+    return f"{sign}₹{whole}.{fraction}"
+
+
 def format_rupees(paise: int) -> str:
     """Render paise as a rupee string with two decimals, e.g. 123456 -> '1234.56'."""
     if not is_paise(paise):

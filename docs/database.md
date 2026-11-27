@@ -50,6 +50,13 @@ Immutable (UPDATE/DELETE blocked). `entry_type` DEBIT/CREDIT, `amount_paise > 0`
 
 Invariant: `wallet.balance_paise == SUM(credits) − SUM(debits)` for that wallet.
 
+### `notifications`
+In-app notifications (see `docs/notifications-design.md`). Columns: `user_id` (who sees it),
+`type` (`TRANSFER_SENT`, `TRANSFER_RECEIVED`, `TRANSFER_FAILED`, `WALLET_FUNDED`),
+`transaction_id`, `counterparty_user_id`, `amount_paise`, `is_read`, `created_at`, `read_at`.
+`UNIQUE (user_id, transaction_id, type)`. No message text is stored; it is built on read.
+Not a financial record: only `is_read`/`read_at` change, and the purge deletes a user's own rows.
+
 ### `reconciliation_runs` / `reconciliation_discrepancies`
 Stored reports, immutable once written. Status is one of `COMPLETED_CLEAN`,
 `COMPLETED_WITH_DISCREPANCIES`, `FAILED` (enforced by CHECK constraints together with
@@ -60,6 +67,7 @@ Stored reports, immutable once written. Status is one of `COMPLETED_CLEAN`,
 * `transactions (sender_user_id, created_at)`, `(recipient_user_id, created_at)` — history.
 * `transactions (sender_user_id, type, status, created_at)` — daily-limit sum.
 * `ledger_entries (wallet_id)`, `(transaction_id)` — reconciliation.
+* `notifications (user_id, created_at)`, `(user_id, is_read)` — list and unread count.
 
 ## Timestamps
 

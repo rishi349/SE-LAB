@@ -18,6 +18,7 @@ from app.core.money import is_paise
 from app.core.validators import normalize_user_id
 from app.db.connection import write_transaction
 from app.modules.ledger import service as ledger
+from app.modules.notifications.service import notify_transaction
 from app.modules.transactions.service import load_transaction_view
 from app.modules.users.repository import get_active_ordinary_user, get_user, get_wallet_for_user
 
@@ -81,4 +82,6 @@ def fund_wallet(
         )
         ledger.credit(conn, transaction_id, wallet_id, amount_paise, ts)
         view = load_transaction_view(conn, transaction_id, admin_user_id)
+    # After COMMIT, best-effort: never changes the outcome above.
+    notify_transaction(conn, transaction_id, now)
     return view, False

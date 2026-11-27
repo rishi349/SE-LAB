@@ -6,6 +6,7 @@ import sqlite3
 
 from app.core.errors import NotFound
 from app.core.money import format_rupees
+from app.modules.notifications.service import unread_count
 from app.modules.users.repository import get_wallet_for_user
 
 
@@ -25,4 +26,7 @@ def get_my_wallet(conn: sqlite3.Connection, user_id: str) -> dict:
     row = get_wallet_for_user(conn, user_id)
     if row is None:
         raise NotFound("Wallet not found.", code="WALLET_NOT_FOUND")
-    return wallet_view(row)
+    view = wallet_view(row)
+    # Piggybacked so the page can update the notification badge without an extra request.
+    view["unread_notifications"] = unread_count(conn, user_id)
+    return view

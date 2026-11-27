@@ -53,6 +53,7 @@ pytest -q
 | Profile | `GET /users/me`, `PATCH /users/me`, `POST /users/me/deletion-request`, `GET /users/{user_id}` |
 | Wallet | `GET /wallets/me` |
 | Transfers | `POST /transfers` (needs `Idempotency-Key`) |
+| Notifications | `GET /notifications`, `GET /notifications/unread-count`, `PATCH /notifications/{id}/read`, `POST /notifications/read-all` |
 | History | `GET /transactions`, `GET /transactions/{transaction_id}` |
 | Admin | `GET /admin/users/{user_id}`, `POST /admin/fundings` (needs `Idempotency-Key`) |
 | Reconciliation | `POST/GET /admin/reconciliation-runs`, `GET /admin/reconciliation-runs/{run_id}` |
@@ -61,7 +62,8 @@ pytest -q
 
 Key rules: ₹50,000 maximum per transfer, ₹1,00,000 successful outgoing per IST day
 (resets at midnight `Asia/Kolkata`), no self-transfers, failed attempts are stored and shown
-in history without their reason, name changes once every 60 days, and account deletion
+in history without their reason, in-app notifications for money sent/received/failed/funded,
+name changes once every 60 days, and account deletion
 needs a ₹0 balance plus a 7-day waiting period.
 
 ## Project layout
@@ -74,7 +76,7 @@ app/
   core/                errors, security (bcrypt/JWT), deps, money, clock, ids, rate limit
   db/                  schema.sql + connection and transaction helpers
   modules/
-    auth/ users/ wallets/ transfers/ transactions/ ledger/ admin/ reconciliation/
+    auth/ users/ wallets/ transfers/ transactions/ ledger/ admin/ reconciliation/ notifications/
 scripts/               create_admin.py, purge_deactivated_accounts.py
 tests/                 unit/  integration/  api/
 docs/                  architecture, database, API, financial flows, security, testing, CI, decisions
@@ -92,9 +94,10 @@ obsidian-vault/        Obsidian "second brain" engineering notes
 * [Security](docs/security.md)
 * [Testing](docs/testing.md)
 * [CI & Git workflow](docs/ci.md)
+* [Notifications design](docs/notifications-design.md)
 * [Engineering decisions & assumptions](docs/decisions.md)
 
 ## Out of scope
 
-Notifications (email/SMS/push), refresh tokens, scheduled reconciliation, wallet freezing,
+Email/SMS/push notifications and real-time updates (in-app notifications are implemented), refresh tokens, scheduled reconciliation, wallet freezing,
 multi-currency, and any external payment gateway.

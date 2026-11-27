@@ -50,6 +50,12 @@ COMMIT ◀───────────────────────�
 
 History shows amount and `FAILED` status; `failure_code` is never selected for any response.
 
+### Notifications after a transfer
+After COMMIT (never inside the money transaction), `notify_transaction` writes in-app
+notifications in its own short transaction: SUCCESS → sender + recipient, FAILED → sender only.
+Errors are logged and ignored, so notifications can never change a transfer's result.
+Replays return before this point, so they create no notifications.
+
 ## 3. Admin funding
 
 `admin.service.fund_wallet(admin, recipient, amount_paise, idempotency_key)`
@@ -65,6 +71,7 @@ COMMIT
 
 * No debit on the admin's wallet; works with the admin at ₹0.
 * Not subject to transfer limits. No cap, no system funding account, no initial allocation.
+* After COMMIT the funded user gets a `WALLET_FUNDED` notification (best-effort).
 * Invalid funding requests raise an error, roll back, store nothing and do not consume the key.
 * Money enters the system **only** through admin funding, so
   `SUM(all wallet balances) == SUM(successful admin funding)` must always hold.
@@ -88,7 +95,7 @@ COMMIT
 2. Status becomes `DEACTIVATED`: login and existing tokens stop working; the account can
    no longer send or receive.
 3. After 7 days `python -m scripts.purge_deactivated_accounts` sets name, email and password
-   hash to NULL and status to `DELETED`. User ID, wallet row, transactions and ledger entries
+   hash to NULL, status to `DELETED`, and deletes the user's notifications. User ID, wallet row, transactions and ledger entries
    are kept as financial records.
 
 ## 6. Reconciliation (read-only)

@@ -21,6 +21,7 @@ docs are in `../docs/`.
 - Accounts
   - [[Account Deletion]]
   - [[Security Model]]
+  - [[Notifications]]
 - Engineering
   - [[Testing Strategy]]
   - [[Git Workflow and CI]]

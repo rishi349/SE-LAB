@@ -18,6 +18,7 @@ from app.core.rate_limit import SlidingWindowRateLimiter
 from app.db.connection import init_db
 from app.modules.admin.router import router as admin_router
 from app.modules.auth.router import router as auth_router
+from app.modules.notifications.router import router as notifications_router
 from app.modules.reconciliation.router import router as reconciliation_router
 from app.modules.transactions.router import router as transactions_router
 from app.modules.transfers.router import router as transfers_router
@@ -83,6 +84,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         wallets_router,
         transfers_router,
         transactions_router,
+        notifications_router,
         admin_router,
         reconciliation_router,
     ):

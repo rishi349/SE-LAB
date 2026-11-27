@@ -29,10 +29,14 @@ A demo web client is served at `/demo` (not part of the API; see `app/static/dem
 | `PATCH /users/me` | any user | 200 | `{name}` only; 409 `NAME_CHANGE_COOLDOWN`; email/user_id/role → 422 |
 | `POST /users/me/deletion-request` | ordinary user | 202 | `{password}`; 409 `BALANCE_NOT_SETTLED` unless balance is ₹0 |
 | `GET /users/{user_id}` | any user | 200 | recipient lookup → `{user_id, name}`; 404 if not an active user |
-| `GET /wallets/me` | any user | 200 | wallet and balance |
+| `GET /wallets/me` | any user | 200 | wallet and balance, plus `unread_notifications` |
 | `POST /transfers` | ordinary user | 201 | `{recipient_user_id, amount_paise}`; see below |
 | `GET /transactions` | any user | 200 | filters: `status`, `direction`, `from_date`, `to_date` (IST dates, inclusive) |
 | `GET /transactions/{id}` | any user | 200 | 404 unless you are sender or recipient |
+| `GET /notifications` | any user | 200 | my notifications, newest first; `page`, `page_size`, `unread_only`; also returns `unread_count` |
+| `GET /notifications/unread-count` | any user | 200 | `{"unread_count": n}` |
+| `PATCH /notifications/{id}/read` | any user | 200 | 404 unless it is yours; marking twice is fine |
+| `POST /notifications/read-all` | any user | 200 | `{"updated": n}` |
 | `GET /admin/users/{user_id}` | admin | 200 | exact User ID only → `{user_id, name}`. No email search. |
 | `POST /admin/fundings` | admin | 201 | `{recipient_user_id, amount_paise}`; 422 `INVALID_AMOUNT`, 404 `USER_NOT_FOUND` |
 | `POST /admin/reconciliation-runs` | admin | 201 | runs checks now, returns the full report |

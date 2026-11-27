@@ -118,12 +118,19 @@ def request_account_deletion(
 def purge_expired_accounts(conn: sqlite3.Connection, now: datetime | None = None) -> int:
     """Erase personal data of accounts whose 7-day waiting period has ended.
 
-    Name, email and password hash are removed. The User ID, wallet row, transactions and
-    ledger entries are retained because they are financial records.
+    Name, email and password hash are removed, and so are the user's own notifications.
+    The User ID, wallet row, transactions and ledger entries are retained because they are
+    financial records.
     """
     now = now or utc_now()
     ts = to_db(now)
     with write_transaction(conn):
+        conn.execute(
+            """DELETE FROM notifications WHERE user_id IN (
+                   SELECT user_id FROM users
+                   WHERE status = 'DEACTIVATED' AND deletion_due_at <= ?)""",
+            (ts,),
+        )
         cursor = conn.execute(
             """UPDATE users
                SET name = NULL, email = NULL, password_hash = NULL,

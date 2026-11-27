@@ -42,6 +42,7 @@ same functions are reused by scripts (`create_admin`, `purge_deactivated_account
 | `transactions` | history, filters, pagination, ownership checks, public transaction view |
 | `admin` | user search by User ID, wallet funding |
 | `reconciliation` | read-only integrity checks and stored reports |
+| `notifications` | in-app notifications written after commit (best-effort), list, unread count, mark read |
 
 ## Cross-cutting pieces (`app/core`)
 

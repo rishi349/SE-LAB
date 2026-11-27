@@ -13,3 +13,4 @@ class WalletOut(BaseModel):
     currency: Literal["INR"] = "INR"
     created_at: str
     updated_at: str
+    unread_notifications: int = 0

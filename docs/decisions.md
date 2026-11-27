@@ -55,8 +55,18 @@ the design decided differently.
 | D24 | Run with `uvicorn app.main:create_app --factory`. | Lets tests build apps with their own settings/database. |
 | D25 | Added a demo client at `/demo` (one static HTML/JS file, `/` redirects to it) at the team's request, for demonstrations and manual testing. | It only calls the public `/api/v1` endpoints, is excluded from the OpenAPI spec, and adds no backend rules. All validation, limits, idempotency and authorization remain enforced by the API. Served from the same origin, so no CORS change was needed. |
 
+## Added after the first release
+
+| # | Decision | Why |
+|---|---|---|
+| D26 | **In-app notifications** added (previously "out of scope for now"): `TRANSFER_SENT`, `TRANSFER_RECEIVED`, `TRANSFER_FAILED` (sender only, no reason), `WALLET_FUNDED`. Admin gets none. Users can only view and mark read. Full design: `docs/notifications-design.md`. | Team decision. Email/SMS/push stay out of scope (need external services). |
+| D27 | Notifications are written **after** the money transaction commits, best-effort (errors logged and ignored). | Keeps "financial transaction success must not depend on notifications". A notification can be lost on error; real systems use a transactional outbox + queue for guaranteed delivery. |
+| D28 | **No polling.** Badge count updates on page load, after actions (via `unread_notifications` piggybacked on `GET /wallets/me`) and when the bell is opened. | Zero background requests regardless of user count. Real-time (WebSockets/SSE) is the documented next step. |
+| D29 | Notification messages are built on read from the counterparty's current name; nothing personal is stored in the notification row. The purge deletes the user's own notifications. | A deleted user's name never lingers in others' notifications ("a deleted user"). |
+
 ## Known limitations
 * Rate limits are per process and reset on restart.
+* Notifications are best-effort and not real-time (see D27, D28).
 * SQLite allows one writer at a time; fine for this project's load.
 * API-layer tests were written against FastAPI's `TestClient`; run `pytest` after
   installing `requirements-dev.txt` (CI does this automatically).

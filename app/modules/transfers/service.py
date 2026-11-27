@@ -25,6 +25,7 @@ from app.core.money import MAX_DAILY_OUTGOING_PAISE, MAX_SINGLE_TRANSFER_PAISE, 
 from app.core.validators import normalize_user_id
 from app.db.connection import write_transaction
 from app.modules.ledger import service as ledger
+from app.modules.notifications.service import notify_transaction
 from app.modules.transactions.service import load_transaction_view
 from app.modules.users.repository import get_active_ordinary_user, get_user, get_wallet_for_user
 
@@ -132,4 +133,6 @@ def execute_transfer(
             ledger.credit(conn, transaction_id, recipient_wallet, amount_paise, ts)
 
         view = load_transaction_view(conn, transaction_id, sender_user_id)
+    # After COMMIT, best-effort: never changes the outcome above.
+    notify_transaction(conn, transaction_id, now)
     return TransferOutcome(transaction=view, replayed=False)
