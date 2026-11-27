@@ -1,0 +1,25 @@
+[project]
+name = "financial-ledger-api"
+version = "1.0.0"
+description = "Financial Ledger & Digital Wallet API (FastAPI + SQLite, modular monolith)"
+requires-python = ">=3.12"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["obsidian-vault"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "SIM"]
+ignore = [
+    "B008",  # FastAPI's Depends()/Query() in defaults is the intended pattern
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S105", "S106", "S608"]
+"app/modules/transactions/service.py" = ["S608"]  # WHERE clause built from fixed fragments only
+"app/modules/reconciliation/service.py" = ["S608"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
