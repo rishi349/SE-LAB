@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ledger Wallet · Demo</title>
+<style>
+  :root {
+    --bg: #f4f5f7; --card: #ffffff; --ink: #1d2433; --muted: #6b7385; --line: #e3e6ec;
+    --brand: #1f4fd8; --brand-ink: #ffffff; --ok: #0f8a4b; --ok-bg: #e6f6ee;
+    --bad: #c62c2c; --bad-bg: #fdecec; --warn-bg: #fff6e0; --warn: #8a5a00;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+         background: var(--bg); color: var(--ink); }
+  header.topbar { display: flex; align-items: center; justify-content: space-between;
+                  padding: 12px 24px; background: var(--ink); color: #fff; }
+  .brand { font-weight: 700; font-size: 18px; letter-spacing: .2px; }
+  .brand small { font-weight: 500; opacity: .65; margin-left: 8px; font-size: 13px; }
+  #whoami { display: flex; gap: 12px; align-items: center; font-size: 14px; }
+  #whoami .role { padding: 2px 8px; border-radius: 999px; background: #ffffff22; font-size: 12px;
+                  text-transform: uppercase; letter-spacing: .5px; }
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 20px;
+            padding: 20px 24px; max-width: 1500px; margin: 0 auto; }
+  @media (max-width: 1100px) { .layout { grid-template-columns: 1fr; } }
+  .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 20px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+          padding: 18px 20px; margin-bottom: 20px; }
+  .card h2 { margin: 0 0 4px; font-size: 16px; }
+  .card .hint { color: var(--muted); font-size: 13px; margin: 0 0 14px; }
+  label { display: block; font-size: 13px; color: var(--muted); margin: 10px 0 4px; }
+  input, select { width: 100%; padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px;
+                  font: inherit; background: #fff; color: var(--ink); }
+  input:focus, select:focus { outline: 2px solid #1f4fd833; border-color: var(--brand); }
+  .row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+  .row > * { flex: 1; min-width: 120px; }
+  .row > .shrink { flex: 0 0 auto; min-width: 0; }
+  button { font: inherit; padding: 9px 14px; border-radius: 8px; border: 1px solid var(--brand);
+           background: var(--brand); color: var(--brand-ink); cursor: pointer; font-weight: 600; }
+  button.secondary { background: #fff; color: var(--brand); }
+  button.ghost { background: transparent; border-color: transparent; color: var(--brand); padding: 6px 8px; }
+  button.danger { background: var(--bad); border-color: var(--bad); }
+  button.small { padding: 5px 10px; font-size: 13px; }
+  button:disabled { opacity: .55; cursor: wait; }
+  .actions { margin-top: 14px; display: flex; gap: 10px; flex-wrap: wrap; }
+  .balance { font-size: 34px; font-weight: 700; margin: 6px 0 2px; letter-spacing: -.5px; }
+  .kv { display: grid; grid-template-columns: 140px 1fr; gap: 6px 12px; font-size: 14px; }
+  .kv dt { color: var(--muted); } .kv dd { margin: 0; }
+  .mono { font-family: var(--mono); font-size: 13px; }
+  .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+  .pill.SUCCESS, .pill.COMPLETED_CLEAN { background: var(--ok-bg); color: var(--ok); }
+  .pill.FAILED { background: var(--bad-bg); color: var(--bad); }
+  .pill.COMPLETED_WITH_DISCREPANCIES { background: var(--warn-bg); color: var(--warn); }
+  .pill.INCOMING { background: #e8f0ff; color: var(--brand); }
+  .pill.OUTGOING { background: #f1f1f4; color: #444b5c; }
+  .result { margin-top: 14px; padding: 12px 14px; border-radius: 8px; font-size: 14px; display: none; }
+  .result.show { display: block; }
+  .result.ok { background: var(--ok-bg); color: #0b5c33; }
+  .result.bad { background: var(--bad-bg); color: #8f1f1f; }
+  .result.info { background: #eef3ff; color: #1b3a8f; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .4px; }
+  td.amount { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .empty { color: var(--muted); text-align: center; padding: 18px; }
+  .pager { display: flex; justify-content: space-between; align-items: center; margin-top: 10px;
+           color: var(--muted); font-size: 13px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .chip { border: 1px dashed #b9c2d6; background: #fafbfd; color: #39425a; border-radius: 999px;
+          padding: 4px 10px; font-size: 12px; font-weight: 500; cursor: pointer; }
+  .tabs { display: flex; gap: 6px; margin-bottom: 16px; }
+  .tabs button { background: #fff; color: var(--ink); border-color: var(--line); }
+  .tabs button.active { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .note { background: var(--warn-bg); color: var(--warn); padding: 10px 12px; border-radius: 8px;
+          font-size: 13px; margin-top: 12px; }
+  /* API console */
+  aside.console { position: sticky; top: 20px; align-self: start; background: #0f1422; color: #d8deea;
+                  border-radius: 12px; padding: 14px; max-height: calc(100vh - 40px); overflow: auto; }
+  aside.console h3 { margin: 0 0 4px; font-size: 14px; color: #fff; }
+  aside.console p { margin: 0 0 10px; color: #8d97ad; font-size: 12px; }
+  .log-entry { border-top: 1px solid #222a3d; padding: 8px 0; font-family: var(--mono); font-size: 12px; }
+  .log-entry summary { cursor: pointer; list-style: none; display: flex; gap: 8px; align-items: center; }
+  .log-entry summary::-webkit-details-marker { display: none; }
+  .code { padding: 1px 6px; border-radius: 4px; font-weight: 700; }
+  .code.s2 { background: #123f2a; color: #6ee7a8; } .code.s4 { background: #4a1d1d; color: #ff9a9a; }
+  .code.s5, .code.s0 { background: #4a3a10; color: #ffd36e; }
+  .log-entry pre { white-space: pre-wrap; word-break: break-all; background: #161d30; padding: 8px;
+                   border-radius: 6px; margin: 6px 0 0; color: #c6d0e5; }
+  .replay { color: #ffd36e; }
+  #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--ink);
+           color: #fff; padding: 10px 16px; border-radius: 8px; font-size: 14px; opacity: 0;
+           transition: opacity .2s; pointer-events: none; }
+  #toast.show { opacity: .95; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">₹ Ledger Wallet <small>demo client for the Financial Ledger API</small></div>
+  <div id="whoami"></div>
+</header>
+
+<div class="layout">
+  <main>
+    <!-- ============================== AUTH ============================== -->
+    <section id="auth-view">
+      <div class="grid2">
+        <form class="card" id="login-form">
+          <h2>Log in</h2>
+          <p class="hint">Users and the admin both log in here.</p>
+          <label for="login-email">Email</label>
+          <input id="login-email" type="email" autocomplete="username" required>
+          <label for="login-password">Password</label>
+          <input id="login-password" type="password" autocomplete="current-password" required>
+          <div class="actions"><button type="submit">Log in</button></div>
+          <div class="result" id="login-result"></div>
+        </form>
+
+        <form class="card" id="register-form">
+          <h2>Create an account</h2>
+          <p class="hint">A wallet with ₹0 is created automatically. Password: 8+ characters.</p>
+          <label for="reg-name">Name</label>
+          <input id="reg-name" required maxlength="100">
+          <label for="reg-email">Email</label>
+          <input id="reg-email" type="email" required>
+          <label for="reg-password">Password</label>
+          <input id="reg-password" type="password" minlength="8" required autocomplete="new-password">
+          <div class="actions"><button type="submit">Register</button></div>
+          <div class="result" id="register-result"></div>
+        </form>
+      </div>
+      <div class="card">
+        <h2>How to demo</h2>
+        <ol class="hint" style="margin:6px 0 0; padding-left:18px">
+          <li>Register two users (e.g. Asha and Ravi). Note their User IDs.</li>
+          <li>Log in as the admin (created with <span class="mono">python -m scripts.create_admin</span>)
+              and fund Asha's wallet.</li>
+          <li>Log in as Asha and send money to Ravi. Try the failure scenarios too.</li>
+          <li>Log in as Ravi to see the incoming transfer, then as admin run reconciliation.</li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- ============================== USER ============================== -->
+    <section id="user-view" hidden>
+      <div class="tabs" id="user-tabs">
+        <button type="button" data-tab="u-wallet" class="active">Wallet &amp; send</button>
+        <button type="button" data-tab="u-history">Transactions</button>
+        <button type="button" data-tab="u-profile">Profile</button>
+      </div>
+
+      <div id="u-wallet" class="tab">
+        <div class="grid2">
+          <div class="card">
+            <h2>My wallet</h2>
+            <div class="balance" id="w-balance">—</div>
+            <p class="hint">Stored as integer paise: <span class="mono" id="w-paise">—</span></p>
+            <dl class="kv">
+              <dt>My User ID</dt>
+              <dd><span class="mono" id="w-userid">—</span>
+                  <button class="ghost small" type="button" id="copy-userid">copy</button></dd>
+              <dt>Wallet ID</dt><dd class="mono" id="w-walletid">—</dd>
+              <dt>Last updated</dt><dd id="w-updated">—</dd>
+            </dl>
+            <div class="actions"><button class="secondary" type="button" id="w-refresh">Refresh</button></div>
+          </div>
+
+          <form class="card" id="send-form">
+            <h2>Send money</h2>
+            <p class="hint">Max ₹50,000 per transfer · ₹1,00,000 successful outgoing per day (IST).</p>
+            <label for="send-to">Recipient User ID</label>
+            <div class="row">
+              <input id="send-to" class="mono" placeholder="USR..." required>
+              <button type="button" class="secondary shrink" id="lookup-btn">Look up</button>
+            </div>
+            <div class="hint" id="lookup-result" style="margin:6px 0 0"></div>
+            <label for="send-amount">Amount (₹)</label>
+            <input id="send-amount" inputmode="decimal" placeholder="e.g. 1000 or 250.50" required>
+            <div class="chips" title="Fill the form with a scenario">
+              <span class="chip" data-scn="zero">₹0 (invalid amount)</span>
+              <span class="chip" data-scn="negative">−₹10 (negative)</span>
+              <span class="chip" data-scn="over">₹50,000.01 (over single limit)</span>
+              <span class="chip" data-scn="self">to myself</span>
+              <span class="chip" data-scn="ghost">unknown recipient</span>
+            </div>
+            <div class="actions">
+              <button type="submit">Send</button>
+              <button type="button" class="secondary" id="send-retry" hidden
+                      title="Re-send the exact same request with the same Idempotency-Key">
+                Retry same request</button>
+            </div>
+            <div class="result" id="send-result"></div>
+          </form>
+        </div>
+      </div>
+
+      <div id="u-history" class="tab" hidden>
+        <div class="card">
+          <h2>Transaction history</h2>
+          <p class="hint">Newest first. Failed attempts show amount and status only — never the reason.</p>
+          <form class="row" id="hist-filters">
+            <div><label>Status</label>
+              <select id="f-status"><option value="">All</option><option>SUCCESS</option><option>FAILED</option></select></div>
+            <div><label>Direction</label>
+              <select id="f-direction"><option value="">All</option><option>INCOMING</option><option>OUTGOING</option></select></div>
+            <div><label>From (IST date)</label><input type="date" id="f-from"></div>
+            <div><label>To (IST date)</label><input type="date" id="f-to"></div>
+            <div><label>Per page</label>
+              <select id="f-size"><option>5</option><option selected>10</option><option>20</option><option>50</option></select></div>
+            <div class="shrink"><button type="submit">Apply</button></div>
+          </form>
+          <div style="overflow-x:auto; margin-top:14px">
+            <table>
+              <thead><tr><th>Date (IST)</th><th>Type</th><th>Direction</th><th>Counterparty</th>
+                <th style="text-align:right">Amount</th><th>Status</th><th>Transaction ID</th></tr></thead>
+              <tbody id="hist-body"></tbody>
+            </table>
+          </div>
+          <div class="pager">
+            <span id="hist-info"></span>
+            <span><button class="secondary small" type="button" id="hist-prev">‹ Prev</button>
+                  <button class="secondary small" type="button" id="hist-next">Next ›</button></span>
+          </div>
+        </div>
+      </div>
+
+      <div id="u-profile" class="tab" hidden>
+        <div class="grid2">
+          <div class="card">
+            <h2>Profile</h2>
+            <dl class="kv" id="profile-kv"></dl>
+            <form id="name-form">
+              <label for="new-name">Change name (allowed once every 60 days)</label>
+              <div class="row">
+                <input id="new-name" maxlength="100" required>
+                <button class="shrink" type="submit">Save</button>
+              </div>
+              <div class="result" id="name-result"></div>
+            </form>
+          </div>
+          <form class="card" id="delete-form">
+            <h2>Delete account</h2>
+            <p class="hint">Your balance must be ₹0 first. The account is deactivated now; personal data
+              is deleted after 7 days. Transaction records are kept.</p>
+            <label for="delete-password">Confirm with your password</label>
+            <input id="delete-password" type="password" required autocomplete="current-password">
+            <div class="actions"><button class="danger" type="submit">Deactivate my account</button></div>
+            <div class="result" id="delete-result"></div>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================== ADMIN ============================== -->
+    <section id="admin-view" hidden>
+      <div class="tabs" id="admin-tabs">
+        <button type="button" data-tab="a-fund" class="active">Find &amp; fund users</button>
+        <button type="button" data-tab="a-recon">Reconciliation</button>
+        <button type="button" data-tab="a-history">Funding history</button>
+      </div>
+
+      <div id="a-fund" class="tab">
+        <div class="grid2">
+          <form class="card" id="search-form">
+            <h2>Find user by User ID</h2>
+            <p class="hint">Exact User ID only (no email search). Shows name and User ID.</p>
+            <label for="search-id">User ID</label>
+            <div class="row">
+              <input id="search-id" class="mono" placeholder="USR..." required>
+              <button class="shrink" type="submit">Search</button>
+            </div>
+            <div class="result" id="search-result"></div>
+          </form>
+
+          <form class="card" id="fund-form">
+            <h2>Fund a wallet</h2>
+            <p class="hint">Credits the user's wallet. Does not debit the admin wallet and has no
+              transfer limits.</p>
+            <label for="fund-to">Recipient User ID</label>
+            <input id="fund-to" class="mono" placeholder="USR..." required>
+            <label for="fund-amount">Amount (₹)</label>
+            <input id="fund-amount" inputmode="decimal" placeholder="e.g. 5000" required>
+            <div class="actions">
+              <button type="submit">Fund wallet</button>
+              <button type="button" class="secondary" id="fund-retry" hidden>Retry same request</button>
+            </div>
+            <div class="result" id="fund-result"></div>
+          </form>
+        </div>
+      </div>
+
+      <div id="a-recon" class="tab" hidden>
+        <div class="card">
+          <h2>Reconciliation</h2>
+          <p class="hint">Read-only check that wallet balances, ledger entries and transactions agree.
+            It reports problems and never changes data.</p>
+          <div class="actions" style="margin-top:0">
+            <button type="button" id="recon-run">Run reconciliation now</button>
+            <button type="button" class="secondary" id="recon-refresh">Refresh list</button>
+          </div>
+          <div style="overflow-x:auto; margin-top:14px">
+            <table>
+              <thead><tr><th>Run ID</th><th>Status</th><th>Started (IST)</th><th>Wallets</th>
+                <th>Transactions</th><th>Discrepancies</th><th></th></tr></thead>
+              <tbody id="recon-body"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card" id="recon-detail" hidden>
+          <h2>Report <span class="mono" id="rd-id"></span></h2>
+          <dl class="kv" id="rd-kv"></dl>
+          <div style="overflow-x:auto; margin-top:12px">
+            <table>
+              <thead><tr><th>Check</th><th>Entity</th><th>Expected</th><th>Actual</th><th>Detail</th></tr></thead>
+              <tbody id="rd-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="a-history" class="tab" hidden>
+        <div class="card">
+          <h2>Fundings I made</h2>
+          <div style="overflow-x:auto">
+            <table>
+              <thead><tr><th>Date (IST)</th><th>Recipient</th><th style="text-align:right">Amount</th>
+                <th>Status</th><th>Transaction ID</th></tr></thead>
+              <tbody id="ah-body"></tbody>
+            </table>
+          </div>
+          <div class="pager">
+            <span id="ah-info"></span>
+            <span><button class="secondary small" type="button" id="ah-prev">‹ Prev</button>
+                  <button class="secondary small" type="button" id="ah-next">Next ›</button></span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <aside class="console">
+    <h3>API calls</h3>
+    <p>Every request this page makes to <span class="mono">/api/v1</span>, newest first. Click to expand.
+      Passwords and tokens are hidden. <button class="ghost small" type="button" id="log-clear"
+      style="color:#8fb0ff">clear</button></p>
+    <div id="log"></div>
+  </aside>
+</div>
+<div id="toast"></div>
+
+<script>
+"use strict";
+const API = "/api/v1";
+const TOKEN_KEY = "ledger_demo_token";
+const state = { token: null, me: null, histPage: 1, ahPage: 1, lastSend: null, lastFund: null };
+const $ = (id) => document.getElementById(id);
+
+/* ---------------------------------------------------------------- helpers */
+function el(tag, attrs, ...children) {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (k === "class") node.className = v;
+    else if (k.startsWith("on")) node.addEventListener(k.slice(2), v);
+    else node.setAttribute(k, v);
+  }
+  for (const child of children) {
+    if (child === null || child === undefined) continue;
+    node.append(child instanceof Node ? child : document.createTextNode(String(child)));
+  }
+  return node;
+}
+
+function toast(message) {
+  const t = $("toast");
+  t.textContent = message;
+  t.classList.add("show");
+  clearTimeout(toast.timer);
+  toast.timer = setTimeout(() => t.classList.remove("show"), 2200);
+}
+
+function showResult(id, kind, ...content) {
+  const box = $(id);
+  box.className = "result show " + kind;
+  box.replaceChildren(...content.map((c) => (c instanceof Node ? c : document.createTextNode(c))));
+}
+
+function hideResult(id) { $(id).className = "result"; }
+
+/** "1,234.56" -> 123456 paise. Integer maths only, no floating point. */
+function rupeesToPaise(input) {
+  const s = String(input).trim().replace(/,/g, "").replace(/^₹/, "").replace(/^−/, "-");
+  const m = /^(-)?(\d{1,13})(?:\.(\d{1,2}))?$/.exec(s);
+  if (!m) return null;
+  const paise = Number(m[2]) * 100 + Number((m[3] || "").padEnd(2, "0"));
+  return m[1] ? -paise : paise;
+}
+
+function formatINR(paise) {
+  const neg = paise < 0;
+  const abs = Math.abs(paise);
+  const rupees = Math.floor(abs / 100);
+  const rem = abs % 100;
+  return (neg ? "−" : "") + "₹" + rupees.toLocaleString("en-IN") + "." + String(rem).padStart(2, "0");
+}
+
+function formatIST(utc) {
+  if (!utc) return "—";
+  return new Date(utc).toLocaleString("en-IN", {
+    timeZone: "Asia/Kolkata", day: "2-digit", month: "short", year: "numeric",
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+  });
+}
+
+function newKey() {
+  if (window.crypto && crypto.randomUUID) return "web-" + crypto.randomUUID();
+  return "web-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 12);
+}
+
+function pill(text) { return el("span", { class: "pill " + text }, text.replaceAll("_", " ")); }
+
+function party(p) {
+  return el("span", {}, p.name || "(unknown user)", el("br"), el("span", { class: "mono" }, p.user_id));
+}
+
+function errorText(err) {
+  if (err.code === "VALIDATION_ERROR" && Array.isArray(err.details) && err.details.length) {
+    return err.message + " " + err.details.map((d) => `${d.field}: ${d.message}`).join("; ");
+  }
+  return err.message || "Request failed.";
+}
+
+async function withBusy(button, fn) {
+  if (button) button.disabled = true;
+  try { return await fn(); } finally { if (button) button.disabled = false; }
+}
+
+/* ---------------------------------------------------------------- API client */
+function maskBody(body) {
+  if (!body || typeof body !== "object") return body;
+  const copy = { ...body };
+  if ("password" in copy) copy.password = "••••••";
+  return copy;
+}
+
+function logCall(method, path, status, request, response, replayed) {
+  const cls = status === 0 ? "s0" : "s" + String(status)[0];
+  const entry = el("details", { class: "log-entry" },
+    el("summary", {},
+      el("span", { class: "code " + cls }, status || "ERR"),
+      el("span", {}, method + " " + path),
+      replayed ? el("span", { class: "replay" }, "replayed") : null),
+    request !== undefined ? el("pre", {}, "request: " + JSON.stringify(maskBody(request), null, 2)) : null,
+    el("pre", {}, "response: " + JSON.stringify(response, null, 2)));
+  $("log").prepend(entry);
+}
+
+async function api(method, path, { body, idem, auth = true } = {}) {
+  const headers = { Accept: "application/json" };
+  if (body !== undefined) headers["Content-Type"] = "application/json";
+  if (auth && state.token) headers.Authorization = "Bearer " + state.token;
+  if (idem) headers["Idempotency-Key"] = idem;
+  let res;
+  try {
+    res = await fetch(API + path, {
+      method, headers, body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+  } catch (e) {
+    logCall(method, path, 0, body, { error: String(e) }, false);
+    throw { status: 0, code: "NETWORK", message: "Cannot reach the server. Is uvicorn running?" };
+  }
+  const text = await res.text();
+  let data = null;
+  try { data = text ? JSON.parse(text) : null; } catch { data = text; }
+  const replayed = res.headers.get("Idempotent-Replayed") === "true";
+  const logged = idem ? { "Idempotency-Key": idem, body } : body;
+  logCall(method, path, res.status, logged, data, replayed);
+  if (!res.ok) {
+    const err = (data && data.error) || { code: "HTTP_" + res.status, message: res.statusText };
+    err.status = res.status;
+    err.replayed = replayed;
+    if (res.status === 401 && auth && state.token && path !== "/users/me/deletion-request") {
+      logout("Your session has expired. Please log in again.");
+    }
+    throw err;
+  }
+  return { data, replayed, status: res.status };
+}
+
+/* ---------------------------------------------------------------- session */
+function saveToken(token) {
+  state.token = token;
+  try {
+    if (token) sessionStorage.setItem(TOKEN_KEY, token); else sessionStorage.removeItem(TOKEN_KEY);
+  } catch { /* storage unavailable: keep it in memory only */ }
+}
+
+function logout(message) {
+  saveToken(null);
+  state.me = null;
+  renderShell();
+  if (message) toast(message);
+}
+
+async function loadMe() {
+  const { data } = await api("GET", "/users/me");
+  state.me = data;
+  renderShell();
+}
+
+function renderShell() {
+  const me = state.me;
+  $("auth-view").hidden = !!me;
+  $("user-view").hidden = !me || me.role !== "user";
+  $("admin-view").hidden = !me || me.role !== "admin";
+  const who = $("whoami");
+  who.replaceChildren();
+  if (!me) return;
+  who.append(
+    el("span", {}, me.name),
+    el("span", { class: "role" }, me.role),
+    el("span", { class: "mono" }, me.user_id),
+    el("button", { class: "secondary small", type: "button", onclick: () => logout("Logged out.") }, "Log out"));
+  if (me.role === "user") { selectTab("user-tabs", "u-wallet"); renderProfile(); }
+  else { selectTab("admin-tabs", "a-fund"); }
+}
+
+function selectTab(groupId, tabId) {
+  const group = $(groupId);
+  for (const btn of group.querySelectorAll("button[data-tab]")) {
+    const active = btn.dataset.tab === tabId;
+    btn.classList.toggle("active", active);
+    $(btn.dataset.tab).hidden = !active;
+  }
+  if (tabId === "u-history") loadHistory();
+  if (tabId === "u-wallet") refreshWallet();
+  if (tabId === "u-profile") renderProfile();
+  if (tabId === "a-recon") loadRuns();
+  if (tabId === "a-history") loadAdminHistory();
+}
+
+for (const groupId of ["user-tabs", "admin-tabs"]) {
+  $(groupId).addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-tab]");
+    if (btn) selectTab(groupId, btn.dataset.tab);
+  });
+}
+
+/* ---------------------------------------------------------------- auth */
+$("login-form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const button = e.submitter;
+  withBusy(button, async () => {
+    hideResult("login-result");
+    try {
+      const { data } = await api("POST", "/auth/login", {
+        auth: false, body: { email: $("login-email").value, password: $("login-password").value },
+      });
+      saveToken(data.access_token);
+      $("login-password").value = "";
+      await loadMe();
+      toast("Welcome, " + state.me.name);
+    } catch (err) {
+      showResult("login-result", "bad", errorText(err));
+    }
+  });
+});
+
+$("register-form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const button = e.submitter;
+  withBusy(button, async () => {
+    hideResult("register-result");
+    try {
+      const { data } = await api("POST", "/auth/register", {
+        auth: false,
+        body: { name: $("reg-name").value, email: $("reg-email").value, password: $("reg-password").value },
+      });
+      showResult("register-result", "ok",
+        "Account created with a ₹0 wallet. User ID: ", el("strong", { class: "mono" }, data.user.user_id),
+        ". You can log in now.");
+      $("login-email").value = data.user.email;
+      $("register-form").reset();
+    } catch (err) {
+      showResult("register-result", "bad", errorText(err));
+    }
+  });
+});
+
+/* ---------------------------------------------------------------- wallet & send */
+async function refreshWallet() {
+  try {
+    const { data } = await api("GET", "/wallets/me");
+    $("w-balance").textContent = formatINR(data.balance_paise);
+    $("w-paise").textContent = data.balance_paise.toLocaleString("en-IN") + " paise";
+    $("w-userid").textContent = data.user_id;
+    $("w-walletid").textContent = data.wallet_id;
+    $("w-updated").textContent = formatIST(data.updated_at);
+  } catch (err) {
+    toast(errorText(err));
+  }
+}
+
+$("w-refresh").addEventListener("click", refreshWallet);
+$("copy-userid").addEventListener("click", async () => {
+  const id = $("w-userid").textContent;
+  try { await navigator.clipboard.writeText(id); toast("User ID copied"); }
+  catch { toast(id); }
+});
+
+$("lookup-btn").addEventListener("click", (e) => withBusy(e.currentTarget, async () => {
+  const id = $("send-to").value.trim();
+  const out = $("lookup-result");
+  if (!id) { out.textContent = "Enter a User ID first."; return; }
+  try {
+    const { data } = await api("GET", "/users/" + encodeURIComponent(id.toUpperCase()));
+    out.replaceChildren("✓ ", el("strong", {}, data.name), " (" + data.user_id + ")");
+  } catch (err) {
+    out.textContent = err.status === 404 || err.status === 422
+      ? "✗ No active user with this User ID." : errorText(err);
+  }
+}));
+
+for (const chip of document.querySelectorAll(".chip[data-scn]")) {
+  chip.addEventListener("click", () => {
+    const scn = chip.dataset.scn;
+    const me = state.me ? state.me.user_id : "";
+    if (scn === "zero") $("send-amount").value = "0";
+    if (scn === "negative") $("send-amount").value = "-10";
+    if (scn === "over") $("send-amount").value = "50000.01";
+    if (scn === "self") { $("send-to").value = me; if (!$("send-amount").value) $("send-amount").value = "10"; }
+    if (scn === "ghost") { $("send-to").value = "USR0000000000"; if (!$("send-amount").value) $("send-amount").value = "10"; }
+    $("lookup-result").textContent = "";
+  });
+}
+
+async function doSend(request) {
+  try {
+    const { data, replayed } = await api("POST", "/transfers", { body: request.body, idem: request.key });
+    showResult("send-result", "ok",
+      replayed ? "Replayed — this request was already processed, nothing was sent again. " : "Sent! ",
+      el("strong", {}, formatINR(data.amount_paise)), " to " + (data.recipient.name || data.recipient.user_id) + ". ",
+      el("br"), "Transaction ", el("span", { class: "mono" }, data.transaction_id), " · ", pill(data.status));
+  } catch (err) {
+    if (err.code === "TRANSFER_FAILED") {
+      const txn = err.details.transaction;
+      showResult("send-result", "bad",
+        (err.replayed ? "Replayed result: " : "") + err.message + " ",
+        el("br"), "The attempt was recorded (", el("span", { class: "mono" }, txn.transaction_id),
+        ", ", formatINR(txn.amount_paise), ") but no money moved. ", pill("FAILED"));
+    } else {
+      showResult("send-result", "bad", errorText(err));
+    }
+  }
+  refreshWallet();
+}
+
+$("send-form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const paise = rupeesToPaise($("send-amount").value);
+  if (paise === null) {
+    showResult("send-result", "bad", "Enter an amount like 1000 or 250.50 (up to 2 decimals).");
+    return;
+  }
+  state.lastSend = {
+    key: newKey(),
+    body: { recipient_user_id: $("send-to").value.trim(), amount_paise: paise },
+  };
+  $("send-retry").hidden = false;
+  withBusy(e.submitter, () => doSend(state.lastSend));
+});
+
+$("send-retry").addEventListener("click", (e) => {
+  if (state.lastSend) withBusy(e.currentTarget, () => doSend(state.lastSend));
+});
+
+/* ---------------------------------------------------------------- history */
+async function loadHistory() {
+  const params = new URLSearchParams({ page: state.histPage, page_size: $("f-size").value });
+  if ($("f-status").value) params.set("status", $("f-status").value);
+  if ($("f-direction").value) params.set("direction", $("f-direction").value);
+  if ($("f-from").value) params.set("from_date", $("f-from").value);
+  if ($("f-to").value) params.set("to_date", $("f-to").value);
+  const body = $("hist-body");
+  try {
+    const { data } = await api("GET", "/transactions?" + params);
+    body.replaceChildren();
+    if (!data.items.length) {
+      body.append(el("tr", {}, el("td", { class: "empty", colspan: "7" }, "No transactions match.")));
+    }
+    for (const t of data.items) {
+      const other = t.direction === "OUTGOING" ? t.recipient : t.sender;
+      const sign = t.status === "SUCCESS" ? (t.direction === "OUTGOING" ? "− " : "+ ") : "";
+      body.append(el("tr", {},
+        el("td", {}, formatIST(t.created_at)),
+        el("td", {}, t.type === "ADMIN_FUNDING" ? "Admin funding" : "Transfer"),
+        el("td", {}, pill(t.direction)),
+        el("td", {}, party(other)),
+        el("td", { class: "amount" }, sign + formatINR(t.amount_paise)),
+        el("td", {}, pill(t.status)),
+        el("td", { class: "mono" }, t.transaction_id)));
+    }
+    const p = data.pagination;
+    $("hist-info").textContent = p.total_items
+      ? `Page ${p.page} of ${p.total_pages} · ${p.total_items} transaction(s)` : "";
+    $("hist-prev").disabled = p.page <= 1;
+    $("hist-next").disabled = p.page >= p.total_pages;
+  } catch (err) {
+    body.replaceChildren(el("tr", {}, el("td", { class: "empty", colspan: "7" }, errorText(err))));
+  }
+}
+
+$("hist-filters").addEventListener("submit", (e) => { e.preventDefault(); state.histPage = 1; loadHistory(); });
+$("hist-prev").addEventListener("click", () => { state.histPage = Math.max(1, state.histPage - 1); loadHistory(); });
+$("hist-next").addEventListener("click", () => { state.histPage += 1; loadHistory(); });
+
+/* ---------------------------------------------------------------- profile */
+function renderProfile() {
+  const me = state.me;
+  if (!me) return;
+  const kv = $("profile-kv");
+  kv.replaceChildren();
+  const rows = [
+    ["Name", me.name], ["Email", me.email + "  (cannot be changed)"],
+    ["User ID", me.user_id + "  (permanent)"], ["Role", me.role], ["Joined", formatIST(me.created_at)],
+    ["Last name change", me.name_changed_at ? formatIST(me.name_changed_at) : "never"],
+    ["Next change allowed", me.next_name_change_allowed_at ? formatIST(me.next_name_change_allowed_at) : "now"],
+  ];
+  for (const [k, v] of rows) kv.append(el("dt", {}, k), el("dd", {}, v));
+}
+
+$("name-form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  withBusy(e.submitter, async () => {
+    try {
+      const { data } = await api("PATCH", "/users/me", { body: { name: $("new-name").value } });
+      state.me = data;
+      renderShell();
+      selectTab("user-tabs", "u-profile");
+      showResult("name-result", "ok", "Name updated to " + data.name + ".");
+      $("new-name").value = "";
+    } catch (err) {
+      const extra = err.details && err.details.next_name_change_allowed_at
+        ? " Next change allowed: " + formatIST(err.details.next_name_change_allowed_at) : "";
+      showResult("name-result", "bad", errorText(err) + extra);
+    }
+  });
+});
+
+$("delete-form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  if (!confirm("Deactivate your account? You will be logged out and cannot log in again.")) return;
+  withBusy(e.submitter, async () => {
+    try {
+      const { data } = await api("POST", "/users/me/deletion-request", {
+        body: { password: $("delete-password").value },
+      });
+      $("delete-password").value = "";
+      logout("Account deactivated. Personal data will be deleted after "
+        + formatIST(data.personal_data_deletion_due_at) + ".");
+    } catch (err) {
+      const extra = err.code === "BALANCE_NOT_SETTLED"
+        ? " Current balance: " + formatINR(err.details.balance_paise) + ". Send it to another user first." : "";
+      showResult("delete-result", "bad", errorText(err) + extra);
+    }
+  });
+});
+
+/* ---------------------------------------------------------------- admin */
+$("search-form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  withBusy(e.submitter, async () => {
+    const id = $("search-id").value.trim().toUpperCase();
+    try {
+      const { data } = await api("GET", "/admin/users/" + encodeURIComponent(id));
+      showResult("search-result", "ok", el("strong", {}, data.name), " · ",
+        el("span", { class: "mono" }, data.user_id), " ",
+        el("button", { class: "secondary small", type: "button", onclick: () => {
+          $("fund-to").value = data.user_id; $("fund-amount").focus();
+        } }, "Fund this user →"));
+    } catch (err) {
+      showResult("search-result", "bad", err.status === 404 || err.status === 422
+        ? "No active user with this User ID." : errorText(err));
+    }
+  });
+});
+
+async function doFund(request) {
+  try {
+    const { data, replayed } = await api("POST", "/admin/fundings", { body: request.body, idem: request.key });
+    showResult("fund-result", "ok",
+      replayed ? "Replayed — already processed, the wallet was not credited again. " : "Funded! ",
+      el("strong", {}, formatINR(data.amount_paise)), " → " + (data.recipient.name || "") + " ",
+      el("span", { class: "mono" }, data.recipient.user_id), el("br"),
+      "Transaction ", el("span", { class: "mono" }, data.transaction_id));
+  } catch (err) {
+    showResult("fund-result", "bad", errorText(err));
+  }
+}
+
+$("fund-form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const paise = rupeesToPaise($("fund-amount").value);
+  if (paise === null) {
+    showResult("fund-result", "bad", "Enter an amount like 5000 or 250.50 (up to 2 decimals).");
+    return;
+  }
+  state.lastFund = { key: newKey(), body: { recipient_user_id: $("fund-to").value.trim(), amount_paise: paise } };
+  $("fund-retry").hidden = false;
+  withBusy(e.submitter, () => doFund(state.lastFund));
+});
+
+$("fund-retry").addEventListener("click", (e) => {
+  if (state.lastFund) withBusy(e.currentTarget, () => doFund(state.lastFund));
+});
+
+async function loadRuns() {
+  const body = $("recon-body");
+  try {
+    const { data } = await api("GET", "/admin/reconciliation-runs?page=1&page_size=20");
+    body.replaceChildren();
+    if (!data.items.length) {
+      body.append(el("tr", {}, el("td", { class: "empty", colspan: "7" }, "No runs yet.")));
+    }
+    for (const r of data.items) {
+      body.append(el("tr", {},
+        el("td", { class: "mono" }, r.run_id), el("td", {}, pill(r.status)),
+        el("td", {}, formatIST(r.started_at)), el("td", {}, r.wallets_checked),
+        el("td", {}, r.transactions_checked), el("td", {}, r.discrepancy_count),
+        el("td", {}, el("button", { class: "secondary small", type: "button",
+          onclick: () => showRun(r.run_id) }, "View"))));
+    }
+  } catch (err) {
+    body.replaceChildren(el("tr", {}, el("td", { class: "empty", colspan: "7" }, errorText(err))));
+  }
+}
+
+function renderRun(report) {
+  $("recon-detail").hidden = false;
+  $("rd-id").textContent = report.run_id;
+  const kv = $("rd-kv");
+  kv.replaceChildren();
+  const rows = [
+    ["Status", pill(report.status)], ["Started", formatIST(report.started_at)],
+    ["Completed", formatIST(report.completed_at)], ["Wallets checked", report.wallets_checked],
+    ["Transactions checked", report.transactions_checked], ["Discrepancies", report.discrepancy_count],
+  ];
+  if (report.failure_detail) rows.push(["Failure detail", report.failure_detail]);
+  for (const [k, v] of rows) kv.append(el("dt", {}, k), el("dd", {}, v));
+  const body = $("rd-body");
+  body.replaceChildren();
+  if (!report.discrepancies.length) {
+    body.append(el("tr", {}, el("td", { class: "empty", colspan: "5" }, "No discrepancies — books are consistent.")));
+  }
+  for (const d of report.discrepancies) {
+    body.append(el("tr", {},
+      el("td", { class: "mono" }, d.check_name),
+      el("td", {}, d.entity_type + " ", el("span", { class: "mono" }, d.entity_id)),
+      el("td", { class: "mono" }, d.expected ?? "—"), el("td", { class: "mono" }, d.actual ?? "—"),
+      el("td", {}, d.detail)));
+  }
+  $("recon-detail").scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+async function showRun(runId) {
+  try {
+    const { data } = await api("GET", "/admin/reconciliation-runs/" + encodeURIComponent(runId));
+    renderRun(data);
+  } catch (err) { toast(errorText(err)); }
+}
+
+$("recon-run").addEventListener("click", (e) => withBusy(e.currentTarget, async () => {
+  try {
+    const { data } = await api("POST", "/admin/reconciliation-runs");
+    renderRun(data);
+    loadRuns();
+    toast("Reconciliation finished: " + data.status.replaceAll("_", " "));
+  } catch (err) { toast(errorText(err)); }
+}));
+$("recon-refresh").addEventListener("click", loadRuns);
+
+async function loadAdminHistory() {
+  const body = $("ah-body");
+  const params = new URLSearchParams({ page: state.ahPage, page_size: 10, direction: "OUTGOING" });
+  try {
+    const { data } = await api("GET", "/transactions?" + params);
+    body.replaceChildren();
+    if (!data.items.length) {
+      body.append(el("tr", {}, el("td", { class: "empty", colspan: "5" }, "No fundings yet.")));
+    }
+    for (const t of data.items) {
+      body.append(el("tr", {},
+        el("td", {}, formatIST(t.created_at)), el("td", {}, party(t.recipient)),
+        el("td", { class: "amount" }, formatINR(t.amount_paise)), el("td", {}, pill(t.status)),
+        el("td", { class: "mono" }, t.transaction_id)));
+    }
+    const p = data.pagination;
+    $("ah-info").textContent = p.total_items ? `Page ${p.page} of ${p.total_pages} · ${p.total_items} funding(s)` : "";
+    $("ah-prev").disabled = p.page <= 1;
+    $("ah-next").disabled = p.page >= p.total_pages;
+  } catch (err) {
+    body.replaceChildren(el("tr", {}, el("td", { class: "empty", colspan: "5" }, errorText(err))));
+  }
+}
+
+$("ah-prev").addEventListener("click", () => { state.ahPage = Math.max(1, state.ahPage - 1); loadAdminHistory(); });
+$("ah-next").addEventListener("click", () => { state.ahPage += 1; loadAdminHistory(); });
+$("log-clear").addEventListener("click", () => $("log").replaceChildren());
+
+/* ---------------------------------------------------------------- start */
+(async function start() {
+  try { state.token = sessionStorage.getItem(TOKEN_KEY); } catch { state.token = null; }
+  if (state.token) {
+    try { await loadMe(); } catch { logout(); }
+  } else {
+    renderShell();
+  }
+})();
+</script>
+</body>
+</html>
